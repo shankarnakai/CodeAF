@@ -21,10 +21,10 @@ import (
 	"github.com/Agent-Field/codeaf/internal/exec"
 )
 
-// TestTheAttributionLawIsOnEveryBelt is the belt half. Signing has no off, so
-// every page spells the law, and the `Assisted-by` line names the model this
+// TestTheAttributionLawIsOnEveryBeltWhenOn is the belt half. With attribution
+// on, every page spells the law, and the `Assisted-by` line names the model this
 // session runs — filled by the render, never left for the model to guess.
-func TestTheAttributionLawIsOnEveryBelt(t *testing.T) {
+func TestTheAttributionLawIsOnEveryBeltWhenOn(t *testing.T) {
 	page := promptWithBeltFacts(Config{Workspace: t.TempDir(), Model: "deepseek/deepseek-v4-flash"})
 	want := "`Assisted-by: CodeAF (deepseek-v4-flash)` and `" + exec.AttributionTrailer + "` as its last two lines"
 	if !strings.Contains(page, want) {
@@ -88,24 +88,34 @@ func TestTheModelOffLineIsBareAndStillSigns(t *testing.T) {
 func TestALandedCommitCarriesTheExactTrailerBytes(t *testing.T) {
 	const coAuthor = "Co-Authored-By: CodeAF <267109073+agentfield-bot@users.noreply.github.com>"
 	for _, row := range []struct {
-		name string
-		sign gitSignature
-		want string
+		name         string
+		sign         gitSignature
+		want         string
+		trailerCount int
 	}{
 		{
-			name: "model on",
-			sign: gitSignature{named: true, model: "deepseek/deepseek-v4-flash"},
-			want: "task: write the report\n\nAssisted-by: CodeAF (deepseek-v4-flash)\n" + coAuthor + "\n",
+			name:         "model on",
+			sign:         gitSignature{named: true, model: "deepseek/deepseek-v4-flash"},
+			want:         "task: write the report\n\nAssisted-by: CodeAF (deepseek-v4-flash)\n" + coAuthor + "\n",
+			trailerCount: 2,
 		},
 		{
-			name: "model off",
-			sign: gitSignature{named: false, model: "deepseek/deepseek-v4-flash"},
-			want: "task: write the report\n\nAssisted-by: CodeAF\n" + coAuthor + "\n",
+			name:         "model off",
+			sign:         gitSignature{named: false, model: "deepseek/deepseek-v4-flash"},
+			want:         "task: write the report\n\nAssisted-by: CodeAF\n" + coAuthor + "\n",
+			trailerCount: 2,
 		},
 		{
-			name: "no model known",
-			sign: gitSignature{},
-			want: "task: write the report\n\nAssisted-by: CodeAF\n" + coAuthor + "\n",
+			name:         "no model known",
+			sign:         gitSignature{},
+			want:         "task: write the report\n\nAssisted-by: CodeAF\n" + coAuthor + "\n",
+			trailerCount: 2,
+		},
+		{
+			name:         "attribution off",
+			sign:         gitSignature{disabled: true},
+			want:         "task: write the report\n",
+			trailerCount: 0,
 		},
 	} {
 		t.Run(row.name, func(t *testing.T) {
@@ -125,11 +135,17 @@ func TestALandedCommitCarriesTheExactTrailerBytes(t *testing.T) {
 			if !found || message != row.want {
 				t.Fatalf("the landed commit's message is\n%q\nwant\n%q", message, row.want)
 			}
-			// AND GIT READS BOTH AS TRAILERS, in order.
+			// AND GIT READS BOTH AS TRAILERS, in order, when signing is on.
 			trailers := gitOut(t, tree.dir, "log", "-1", "--format=%(trailers:only)")
-			if lines := strings.Split(strings.TrimSpace(trailers), "\n"); len(lines) != 2 ||
-				!strings.HasPrefix(lines[0], "Assisted-by: CodeAF") || lines[1] != coAuthor {
-				t.Fatalf("git does not read the two lines as the trailer block: %q", trailers)
+			if row.trailerCount == 0 {
+				if strings.TrimSpace(trailers) != "" {
+					t.Fatalf("attribution-off commit has trailers: %q", trailers)
+				}
+			} else {
+				if lines := strings.Split(strings.TrimSpace(trailers), "\n"); len(lines) != row.trailerCount ||
+					!strings.HasPrefix(lines[0], "Assisted-by: CodeAF") || lines[1] != coAuthor {
+					t.Fatalf("git does not read the two lines as the trailer block: %q", trailers)
+				}
 			}
 			// AND THE AUTHOR IS THE BOT ACCOUNT. The trailer is provenance on top;
 			// the author line is the identity sibling landings read
@@ -173,5 +189,33 @@ func TestATaskNodeInheritsTheModelNameRow(t *testing.T) {
 	}
 	if worker.signsGitWork().named {
 		t.Fatal("a worker that inherited the row still names the model in what it lands")
+	}
+}
+
+// THE ATTRIBUTION OFF SWITCH TRAVELS WITH THE WORK. A child node that does not
+// inherit it would add CodeAF trailers for somebody who turned them off.
+func TestATaskNodeInheritsTheAttributionOffRow(t *testing.T) {
+	session, _ := newTestAgent(t, &scriptedCompleter{}, func(config *Config) {
+		config.AttributionOff = true
+	})
+	worker, _ := workerFor(t, session, taskSpec{
+		title: "land the change", request: "land the change", brief: "land the change",
+		acceptance: "it lands", depth: 1,
+	})
+	if !worker.config.AttributionOff {
+		t.Fatal("the person's attribution-off choice did not travel to the worker")
+	}
+	if !worker.signsGitWork().disabled {
+		t.Fatal("a worker that inherited the switch still signs what it lands")
+	}
+}
+
+// ATTRIBUTION OFF REMOVES THE LAW FROM THE BELT PAGE SHOWN TO THE MODEL.
+func TestAttributionOffLeavesTheLawOffTheBelt(t *testing.T) {
+	page := promptWithBeltFacts(Config{Workspace: t.TempDir(), Model: "deepseek/deepseek-v4-flash", AttributionOff: true})
+	for _, unwanted := range []string{"Assisted-by: CodeAF", exec.AttributionTrailer, exec.AttributionPullFooter, exec.AttributionCommentFooter} {
+		if strings.Contains(page, unwanted) {
+			t.Fatalf("attribution-off belt page still carries %q", unwanted)
+		}
 	}
 }

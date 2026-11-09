@@ -905,8 +905,10 @@ The whole list, by settings key:
   clock and the countdown for the next session.
 - **Whether codeaf's own work is checked** — `task.audit`. A session that can
   switch off the check can call anything done.
-- **How work that leaves this machine is signed** — `attribution.model`, whether
-  the `Assisted-by` line names the model. The signature itself has no row.
+- **How work that leaves this machine is signed** — `attribution`, whether any
+  AI trailer is added at all, and `attribution.model`, whether the `Assisted-by`
+  line names the model. Both sit in the Interface category of `/settings` and
+  are guarded from model changes.
 - **Your credentials** — `search.exaKey`, `search.firecrawlKey`, `search.jinaKey`,
   `google_oauth_secret`, and `google_oauth_client`, which is useless without the
   secret beside it. These restrain nothing; they are refused because a key
@@ -938,8 +940,11 @@ A row your environment has pinned refuses like it does everywhere else:
 ## Does codeaf sign my commits — why is there a co-author on my commit, who is agentfield-bot, how do I turn the trailer off
 
 codeaf signs commits it writes, and its worker harness signs the commits its
-workers make. The commit mark cannot be turned off unless the repository's
-CONTRIBUTING policy forbids AI trailers.
+workers make. Signing is **on by default** and can be turned off in
+`/settings` under **Interface**, on the row labelled **AI attribution on
+commits** (`attribution`), or with the environment variable
+`CODEAF_ATTRIBUTION=0`. Off means no `Assisted-by` and no
+`Co-Authored-By` trailer is added.
 
 **A commit** ends with one blank line and two trailer lines, `Assisted-by`
 first and the co-author last, and nothing after them:
@@ -954,14 +959,15 @@ conversation is talking to at that moment — and only the model: the provider o
 company in front of it (`z-ai/`) and a routing suffix such as `:free` or
 `:nitro` come off, and the model's own version or date stays. Switch with
 `/model` and the next commit names the model you switched to. To hide only the
-model name, turn off the **model in commits** row (`attribution.model`) in
-`/settings`, or set `CODEAF_ATTRIBUTION_MODEL=0`. Then the first line is bare
-`Assisted-by: CodeAF`; the co-author line remains.
+model name while keeping the trailer, turn off the **model in commits** row
+(`attribution.model`) in `/settings` under **Interface**, or set `CODEAF_ATTRIBUTION_MODEL=0`. Then
+the first line is bare `Assisted-by: CodeAF`; the co-author line remains.
 
 **A task on the worker harness (the default) names no model.** Its workers'
 own commits and its landing commit carry the bare `Assisted-by: CodeAF` and the
-co-author line. The section "Does the task sign the commits it makes itself"
-explains when those commits are signed or left alone.
+co-author line — unless attribution is off, in which case no AI trailer is added.
+The section "Does the task sign the commits it makes itself" explains when those
+commits are signed or left alone.
 
 `agentfield-bot` is codeaf's GitHub account. The numeric ID in
 `267109073+agentfield-bot@users.noreply.github.com` makes GitHub link the
@@ -1042,33 +1048,19 @@ from a worker commit and may be signed at the end.
 
 ## I turned signing off before — why are my commits signed again, can I turn attribution off
 
-**Signing is on by default, and there is no switch that turns it off.** Until
-2026-09-23 the `attribution` row, or `CODEAF_ATTRIBUTION`, took the marks off.
-Both are gone. A profile that still holds an `attribution` key — `false`
-included — or a shell that still sets `CODEAF_ATTRIBUTION` is not obeyed, and
-it is not ignored in silence either: the chat says this once, as a note in the
-conversation, and a headless command such as `codeaf do` prints it on stderr,
-after `codeaf: `, every time it starts while the key is still there:
+Attribution is a regular setting again. The **AI attribution on commits** row
+(`attribution`) in `/settings` under **Interface**, or the environment variable
+`CODEAF_ATTRIBUTION`, turns the trailer on or off. The default is **on**. Set it
+off and no `Assisted-by` or `Co-Authored-By` line is added.
 
-```
-the attribution row and CODEAF_ATTRIBUTION are gone: codeaf always signs the commits, pull requests, issues and comments it writes. The one part you can turn off is the model's name in the Assisted-by line, with the attribution.model row.
-```
+A profile that still holds a retired `attribution` key from the 2026-09-23
+removal is treated as the new `attribution` row: `false` means off, anything
+else means on. No warning is shown because the row is valid again.
 
-Delete the key from your profile's `config.json`, or unset the variable, and
-the note stops.
-
-**What you can still turn off is the model's name.** The **model in commits**
-row (`attribution.model`, on the General category of `/settings`), or
-`CODEAF_ATTRIBUTION_MODEL=0`, leaves `Assisted-by: CodeAF` with no brackets. A
-landing on the worker harness, the default belt, carries that bare line either way.
-codeaf cannot change the row for you — ask it to and it says so and points you
-at `/settings`. A change lands on the next piece of work handed off, and on
-the next codeaf you start.
-
-**A repository policy can forbid the marks.** When a CONTRIBUTING file in the
-repository's top level, `.github/` or `docs/` forbids AI trailers, codeaf's
-own commits and its signing of worker commits add none. Tell the model about
-any further policy for pull requests, issues or comments.
+The **model in commits** row (`attribution.model`) hides only the model name,
+leaving `Assisted-by: CodeAF`; it has no effect when attribution itself is off.
+A repository CONTRIBUTING policy forbidding AI trailers still wins, and codeaf
+cannot change either row for you.
 
 ## A timeout is not a deny — why it said "denied by the person" when nobody said no
 

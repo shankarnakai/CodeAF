@@ -115,6 +115,7 @@ func v3Subharnesses(settings config.Config, models *catalog.Catalog, model strin
 	// non-blocking answer, two readers.
 	linear := exec.NewLinear(client, space, web, 0, 0, 0).
 		WithAssistedBy(config.AssistedByModelAt(settings.ProfileDir, model)).
+		WithAttributionOff(!config.AttributionAt(settings.ProfileDir)).
 		WithContextLength(window)
 	registry := exec.NewRegistry(linear)
 	// THE GENERALIST IS WHAT THE DEOPTIMIZATION PATH FALLS BACK TO, so it is

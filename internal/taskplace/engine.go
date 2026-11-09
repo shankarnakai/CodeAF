@@ -32,7 +32,7 @@ func (e *Engine) dial(ctx context.Context) (*taskdoor.Conn, error) {
 	}
 	return taskdoor.Dial(ctx, e.Copies.Service, e.Copies.Identity, e.Copies.Device, e.Computer.Device, e.Computer.Name)
 }
-func (e *Engine) Land(context.Context, *plandb.Store, string, string, string) (session.RunLanding, error) {
+func (e *Engine) Land(context.Context, *plandb.Store, string, string, string, bool) (session.RunLanding, error) {
 	return session.RunLanding{}, errors.New("the returned task copy must be landed by this computer")
 }
 

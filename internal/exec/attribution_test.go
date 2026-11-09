@@ -130,15 +130,20 @@ func TestSignCommitMessageOncePreservesAndCompletesWorkerTrailers(t *testing.T) 
 // THE SETTINGS ROW'S HINT IS THE TWO LINES THIS PACKAGE WRITES. internal/config
 // cannot import this package, so it spells them; this holds its spelling to the
 // one that reaches a commit.
-func TestTheModelNameRowsHintIsTheTwoLines(t *testing.T) {
-	want := "On, commits say `" + AssistedBy("<model>") + "`; off, `" + AttributionAssistedBy + "`."
-	if config.AttributionModelHint != want {
-		t.Fatalf("the attribution.model hint = %q, want %q", config.AttributionModelHint, want)
+func TestTheAttributionRowsHintsAreTheLines(t *testing.T) {
+	modelWant := "On, commits say `" + AssistedBy("<model>") + "`; off, `" + AttributionAssistedBy + "`."
+	if config.AttributionModelHint != modelWant {
+		t.Fatalf("the attribution.model hint = %q, want %q", config.AttributionModelHint, modelWant)
+	}
+	want := "On, commits carry `" + AttributionAssistedBy + "` and `" + AttributionTrailer + "`. Off, no AI trailer is added."
+	if config.AttributionHint != want {
+		t.Fatalf("the attribution hint = %q, want %q", config.AttributionHint, want)
 	}
 }
 
-// THE LAW IS IN EVERY CONTRACT, because signing has no off. What the surface
-// hands the loop decides only whether the `Assisted-by` line names a model.
+// THE LAW IS IN EVERY CONTRACT WHEN ATTRIBUTION IS ON, and the master
+// `attribution` switch decides whether the whole law is included. When the
+// person turned attribution off, the whole law is left out of the system prompt.
 func TestAttributionLawIsInEveryContract(t *testing.T) {
 	named := NewLinear(&scriptedCompleter{}, workspace(t), nil, 10, 1_000_000, time.Minute).
 		WithAssistedBy("qwen/qwen3-coder").system(Task{NodeID: 1, Brief: "work"}, nil)
@@ -177,10 +182,23 @@ func TestAttributionLawIsInEveryContract(t *testing.T) {
 			}
 		}
 	}
+
+	// ATTRIBUTION OFF REMOVES THE LAW FROM THE CONTRACT.
+	off := NewLinear(&scriptedCompleter{}, workspace(t), nil, 10, 1_000_000, time.Minute).
+		WithAttributionOff(true).system(Task{NodeID: 1, Brief: "work"}, nil)
+	for _, unwanted := range attributionStrings {
+		if strings.Contains(off, unwanted) {
+			t.Fatalf("attribution-off contract still carries %q", unwanted)
+		}
+	}
+	if strings.Contains(off, "Assisted-by: CodeAF") {
+		t.Fatalf("attribution-off contract still names Assisted-by")
+	}
 }
 
-// The law is unconditional: a reflex micro-leaf and a contracted job carry it
-// too, because nothing detects in advance whether a job will touch git.
+// The law is unconditional when attribution is on: a reflex micro-leaf and a
+// contracted job carry it too, because nothing detects in advance whether a job
+// will touch git. With attribution off, none of them carry it.
 func TestAttributionRidesEveryShapeOfLeafToTheModel(t *testing.T) {
 	for _, task := range []Task{
 		{NodeID: 1, Brief: "work"},
@@ -199,6 +217,28 @@ func TestAttributionRidesEveryShapeOfLeafToTheModel(t *testing.T) {
 		for _, want := range append(attributionStrings, "Assisted-by: CodeAF (deepseek-v4-flash)") {
 			if !strings.Contains(system, want) {
 				t.Fatalf("node %d never saw %q", task.NodeID, want)
+			}
+		}
+	}
+
+	for _, task := range []Task{
+		{NodeID: 4, Brief: "work"},
+		{NodeID: 5, Brief: "work", Reflex: true},
+		{NodeID: 6, Brief: "work", Contract: "read the diff first"},
+	} {
+		client := &scriptedCompleter{}
+		linear := NewLinear(client, workspace(t), nil, 10, 1_000_000, time.Minute).
+			WithAssistedBy("deepseek/deepseek-v4-flash").WithAttributionOff(true)
+		if _, err := linear.Run(context.Background(), task); err != nil {
+			t.Fatal(err)
+		}
+		if len(client.seen) == 0 {
+			t.Fatal("the model was never called")
+		}
+		system := client.seen[0][0].Content[0].Text
+		for _, unwanted := range append(attributionStrings, "Assisted-by: CodeAF") {
+			if strings.Contains(system, unwanted) {
+				t.Fatalf("node %d still saw %q with attribution off", task.NodeID, unwanted)
 			}
 		}
 	}

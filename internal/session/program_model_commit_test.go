@@ -172,3 +172,28 @@ func TestProgramFinishLeavesThePersonsCommitOnTheRunBranchAlone(t *testing.T) {
 		t.Fatalf("the person's commit on the run branch was amended: %s -> %s", before, after)
 	}
 }
+
+// A PROGRAM RUN WITH ATTRIBUTION OFF WRITES NO AI TRAILERS on its finishing
+// commit. The model-name row still travels, but it is ignored when the master
+// switch is off.
+func TestProgramFinishLeavesOutTrailersWhenAttributionOff(t *testing.T) {
+	repo := newTestRepo(t)
+	mustGit(t, repo, "config", "user.name", "Fixture Person")
+	mustGit(t, repo, "config", "user.email", "person@example.test")
+	folder, err := PrepareProgramFolder(ProgramFolderOrder{
+		Program: testPrograms("fake")[0], Dir: repo, Title: "No attribution",
+		Holder: "task 9", Keep: t.TempDir(), SignModel: "fixture/vendor-model",
+		AttributionOff: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(folder.release)
+	writeFile(t, filepath.Join(repo, "auto.txt"), "auto\n")
+	mustGit(t, repo, "add", "auto.txt")
+	folder.Finish("done")
+	message := gitOut(t, repo, "log", "-1", "--format=%B")
+	if strings.Contains(message, "Assisted-by") || strings.Contains(message, "Co-Authored-By") {
+		t.Fatalf("attribution-off finish wrote AI trailers: %q", message)
+	}
+}

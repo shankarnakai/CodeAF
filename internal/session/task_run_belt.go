@@ -344,7 +344,7 @@ type RunLanding struct {
 // copy onto its branch and answers where the work went.
 type RunEngine interface {
 	Start(ctx context.Context, spec RunSpec) RunSummary
-	Land(ctx context.Context, store *plandb.Store, workspace, base, rootID string) (RunLanding, error)
+	Land(ctx context.Context, store *plandb.Store, workspace, base, rootID string, attributionOff bool) (RunLanding, error)
 }
 
 // chatRunEngine is the registered engine, set once by [RegisterRunEngine] and
@@ -1013,6 +1013,7 @@ func (a *Agent) readyRunFolder(id uint64, title, sessionDir string, stand taskSt
 		Program: *via, Dir: stand.dir, Title: title, Holder: taskStopName(id, title),
 		Keep: plandb.TaskDir(sessionDir, strconv.FormatUint(id, 10)), Instead: "say which folder the work is in, as ground",
 		Place: a.config.Place, SignModel: a.signsGitWork().namedModel(), Carry: carry,
+		AttributionOff: a.config.AttributionOff,
 	})
 }
 
@@ -2262,7 +2263,7 @@ func (a *Agent) landBeltRun(ctx context.Context, engine RunEngine, run *beltRun)
 	if run.tree.workspaceSet != nil {
 		return a.landWorkspaceSet(ctx, engine, run)
 	}
-	landing, err := engine.Land(ctx, run.store, run.workspace, run.tree.checkBase, run.root)
+	landing, err := engine.Land(ctx, run.store, run.workspace, run.tree.checkBase, run.root, a.config.AttributionOff)
 	if err != nil {
 		if stopped, _ := a.beltRunStopped(run); stopped {
 			return RunLanding{}

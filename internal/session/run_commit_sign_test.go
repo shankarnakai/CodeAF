@@ -208,7 +208,7 @@ func TestLandRunTreeSignsWorkerCommitsAndNamesTheirPaths(t *testing.T) {
 	if _, err := os.Stat(marker); err != nil {
 		t.Fatalf("worker's pre-commit hook did not run: %v", err)
 	}
-	branch, paths, refused, err := LandRunTree(repo, base, "the run", "")
+	branch, paths, refused, err := LandRunTree(repo, base, "the run", "", false)
 	if err != nil || refused != "" || branch != "work" || !reflect.DeepEqual(paths, []string{"worker.txt"}) {
 		t.Fatalf("landing = %q, %v, %q, %v", branch, paths, refused, err)
 	}
@@ -227,7 +227,7 @@ func TestLandRunTreeSignsWorkerCommitsAndNamesTheirPaths(t *testing.T) {
 	base = strings.TrimSpace(gitOut(t, repo, "rev-parse", "HEAD"))
 	runCommitFile(t, repo, "unsigned.txt", "unsigned")
 	writeFile(t, filepath.Join(repo, "leftover.txt"), "leftover\n")
-	_, paths, refused, err = LandRunTree(repo, base, "the run", "")
+	_, paths, refused, err = LandRunTree(repo, base, "the run", "", false)
 	if err != nil || refused != "" || len(paths) != 2 {
 		t.Fatalf("refusing repository landing = %v, %q, %v", paths, refused, err)
 	}

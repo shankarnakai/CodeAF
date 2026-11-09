@@ -63,7 +63,7 @@ func TestRunTreeSnapshotSignsFirstCommitsOnUnbornBranch(t *testing.T) {
 	snapshot := SnapshotRunTree(repo)
 	runCommitFile(t, repo, "first.txt", "first")
 	runCommitFile(t, repo, "second.txt", "second")
-	count, err := snapshot.SignRunCommits("")
+	count, err := snapshot.SignRunCommits("", false)
 	if err != nil || count != 2 {
 		t.Fatalf("sign unborn run = %d, %v; want two commits", count, err)
 	}
@@ -72,7 +72,31 @@ func TestRunTreeSnapshotSignsFirstCommitsOnUnbornBranch(t *testing.T) {
 			t.Fatalf("%s not signed once: %q", rev, message)
 		}
 	}
-	if count, err := snapshot.SignRunCommits(""); err != nil || count != 0 {
+	if count, err := snapshot.SignRunCommits("", false); err != nil || count != 0 {
 		t.Fatalf("second signing = %d, %v", count, err)
+	}
+}
+
+// Contract: when attribution is off, SignRunCommits adds no AI trailers to the
+// run's private commits. Worker commits that already carry no trailer block are
+// left alone, so the branch remains clean.
+func TestSignRunCommitsWritesNoTrailersWhenAttributionOff(t *testing.T) {
+	repo := newTestRepo(t)
+	snapshot := SnapshotRunTree(repo)
+	base := strings.TrimSpace(gitOut(t, repo, "rev-parse", "HEAD"))
+	runCommitFile(t, repo, "one.txt", "one")
+	runCommitFile(t, repo, "two.txt", "two")
+	count, err := snapshot.SignRunCommits("deepseek/deepseek-v4-flash", true)
+	if err != nil || count != 0 {
+		t.Fatalf("sign attribution off = %d, %v; want no rewrites", count, err)
+	}
+	for _, rev := range []string{"HEAD", "HEAD~1"} {
+		message := gitOut(t, repo, "log", "-1", "--format=%B", rev)
+		if strings.Contains(message, "Assisted-by") || strings.Contains(message, "Co-Authored-By") {
+			t.Fatalf("%s should not carry AI trailers: %q", rev, message)
+		}
+	}
+	if got := strings.TrimSpace(gitOut(t, repo, "rev-parse", "HEAD~2")); got != base {
+		t.Fatalf("base moved: %s -> %s", base, got)
 	}
 }

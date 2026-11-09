@@ -748,41 +748,43 @@ func TestRetiredProfileKeysAreNotReportedUnread(t *testing.T) {
 	}
 }
 
-// THE ATTRIBUTION ROW IS RETIRED, AND A PROFILE THAT STILL SAYS IT IS TOLD SO.
-// Signing has no off since 2026-09-23. A profile holding `attribution: false`
-// holds a person's decision, so it is neither obeyed (the row is gone, nothing
-// reads it) nor ignored in silence (the rest of the retired keys are): the key
-// is reported unread, and the surface prints the row's own sentence, which
-// names the one thing that can still be turned off. `CODEAF_ATTRIBUTION` set in
-// the shell is the same decision and is told the same way.
-func TestTheRetiredAttributionRowIsToldPlainly(t *testing.T) {
+// THE ATTRIBUTION ROW IS LIVE AGAIN, AND IT CONTROLS WHETHER CODEAF SIGNS.
+// A profile holding `attribution: false` is obeyed: no `Assisted-by` or
+// `Co-Authored-By` lines are added. `CODEAF_ATTRIBUTION` in the shell is the
+// same row pinned by another name. The model-name row (`attribution.model`)
+// only matters when attribution is on.
+func TestAttributionRowControlsSigning(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("CODEAF_ATTRIBUTION", "")
-	if !retiredProfileKeys["attribution"] {
-		t.Fatal("attribution is not a retired profile key")
+	if retiredProfileKeys["attribution"] {
+		t.Fatal("attribution is still a retired profile key")
 	}
-	for _, row := range NewSettings(SettingsOptions{ProfileDir: dir}).Rows() {
-		if row.Key == "attribution" || row.Env == "CODEAF_ATTRIBUTION" {
-			t.Fatalf("a settings row still reads the retired attribution switch: %+v", row)
-		}
+	row, ok := NewSettings(SettingsOptions{ProfileDir: dir}).Row(KeyAttribution)
+	if !ok {
+		t.Fatalf("no settings row for %s", KeyAttribution)
 	}
-	note := RetiredRowNote("attribution")
-	for _, want := range []string{"attribution", "CODEAF_ATTRIBUTION", "gone", "always signs", KeyAttributionModel} {
-		if !strings.Contains(note, want) {
-			t.Fatalf("the retired row's sentence does not say %q: %q", want, note)
-		}
+	if row.Env != "CODEAF_ATTRIBUTION" {
+		t.Fatalf("attribution row env = %q, want CODEAF_ATTRIBUTION", row.Env)
 	}
-
-	values := map[string]json.RawMessage{"attribution": json.RawMessage(`false`)}
-	if unread := warnUnreadProfileKeys(dir, values); len(unread) != 1 || unread[0] != "attribution" {
-		t.Fatalf("a profile saying attribution: false was not told; unread = %v", unread)
+	if row.Kind != SettingBool {
+		t.Fatalf("attribution row kind = %v, want %v", row.Kind, SettingBool)
 	}
 
-	t.Setenv("CODEAF_ATTRIBUTION", "off")
-	if unread := warnUnreadProfileKeys(dir, nil); len(unread) != 1 || unread[0] != "attribution" {
-		t.Fatalf("CODEAF_ATTRIBUTION=off was not told; unread = %v", unread)
+	// Off via env.
+	t.Setenv("CODEAF_ATTRIBUTION", "0")
+	if AttributionAt(dir) {
+		t.Fatal("CODEAF_ATTRIBUTION=0 did not turn attribution off")
 	}
-	if unread := warnUnreadProfileKeys(dir, values); len(unread) != 1 {
-		t.Fatalf("the profile and the shell saying it together were told twice: %v", unread)
+	// On by default.
+	t.Setenv("CODEAF_ATTRIBUTION", "")
+	if !AttributionAt(dir) {
+		t.Fatal("attribution is not on by default")
+	}
+	// Persisted value is read.
+	if err := writeBool(dir, KeyAttribution, "false"); err != nil {
+		t.Fatalf("write attribution=false: %v", err)
+	}
+	if AttributionAt(dir) {
+		t.Fatal("persisted attribution=false did not turn attribution off")
 	}
 }

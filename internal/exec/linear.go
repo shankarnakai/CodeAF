@@ -418,11 +418,11 @@ const AttributionCommentFooter = "<sub>drafted with [CodeAF](https://agentfield.
 // that attributes nobody and counts as nothing, so this is the one law on the
 // belt that cannot be paraphrased down.
 //
-// IT HAS NO OFF. Signing used to be a settings row; since 2026-09-23 it is
-// always on, and the only thing a person may turn off is the model's name in
-// the `Assisted-by` line. What still wins is a repository's own CONTRIBUTING
-// policy against AI trailers, which is the repository's rule and not a person's
-// setting, and the law's last sentence says so.
+// IT IS INCLUDED WHEN THE `attribution` MASTER SWITCH IS ON AND OMITTED WHEN
+// IT IS OFF. The switch is the person's `CODEAF_ATTRIBUTION` / `attribution`
+// row (internal/config's KeyAttribution). What still wins is a repository's
+// own CONTRIBUTING policy against AI trailers, which is the repository's rule
+// and not a person's setting, and the law's last sentence says so.
 const AttributionLaw = "SIGN GIT WORK YOU DO WITH `bash`, GENTLY AND ONCE. A commit ends with a blank " +
 	"line, then `" + AttributionAssistedBySlot + "` and `" + AttributionTrailer + "` as its last two lines. " +
 	"A pull request or issue body ends with " + AttributionSeparator +
@@ -445,8 +445,8 @@ func FillAttribution(text, model string) string {
 	return strings.ReplaceAll(text, AttributionAssistedBySlot, AssistedBy(model))
 }
 
-// attributionPrompt is unconditional: signing has no off, and the instruction
-// carries its own condition, so no task-type detection has to guess whether a
+// attributionPrompt is the law the contract carries when attribution is on.
+// The instruction carries its own condition, so no task-type detection has to guess whether a
 // job will touch git.
 //
 // It is [AttributionLaw] and one line more. A leaf loop is the surface that
@@ -484,8 +484,12 @@ type Linear struct {
 	deadline  time.Duration
 	// assistedBy is the model the contract's `Assisted-by` line names, and empty
 	// when there is none to name: the surface did not say, or the person turned
-	// the model's name off. It never turns the signature itself off.
+	// the model's name off. It never turns the signature itself off; use
+	// attributionOff for that.
 	assistedBy string
+	// attributionOff removes the attribution law from the contract and the
+	// trailer block from any commit the leaf writes itself. The default is on.
+	attributionOff bool
 	// contextTokens is how much the working model can hold in one request, and
 	// it is the only honest input to the observation window. Zero means nobody
 	// could say; see observationWindow, which has a default for exactly that.
@@ -540,9 +544,18 @@ func (l *Linear) ContextLength() int { return l.contextTokens }
 // surface passes the model this leaf runs on, or the empty string when the
 // person turned the model's name off (internal/config's AssistedByModelAt), and
 // the line is then the bare `Assisted-by: CodeAF`. The attribution law itself is
-// in every contract whatever this is handed.
+// still included unless [Linear.WithAttributionOff] says otherwise.
 func (l *Linear) WithAssistedBy(model string) *Linear {
 	l.assistedBy = model
+	return l
+}
+
+// WithAttributionOff removes the attribution law from the leaf contract when the
+// person turned signing off. The default is on. Any commit the leaf writes with
+// `bash` must still be signed or stripped by the harness on landing; this only
+// affects what the model is told.
+func (l *Linear) WithAttributionOff(off bool) *Linear {
+	l.attributionOff = off
 	return l
 }
 
@@ -783,7 +796,7 @@ func NewLinear(client Completer, workspace *Workspace, web *Web, maxTurns, maxTo
 func (l *Linear) Subharness() string { return LinearSubharness }
 
 // system is the leaf's standing contract: the harness's invariants, then the
-// attribution law, then the narrowing for this assignment. It is
+// attribution law when attribution is on, then the narrowing for this assignment. It is
 // what a specialised harness would have hand-written for this domain —
 // generated instead, which is what keeps the loop generic.
 //
@@ -807,7 +820,10 @@ func (l *Linear) Subharness() string { return LinearSubharness }
 // the toolbox, and everything ahead of it stays the byte-identical prefix four
 // sibling leaves share.
 func (l *Linear) system(task Task, guidelines []string) string {
-	system := systemPrompt + FillAttribution(attributionPrompt, l.assistedBy)
+	system := systemPrompt
+	if !l.attributionOff {
+		system += FillAttribution(attributionPrompt, l.assistedBy)
+	}
 	if task.Reflex {
 		system += reflexSystemPrompt
 	}

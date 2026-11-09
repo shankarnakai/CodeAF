@@ -66,7 +66,7 @@ func (e *scriptedTaskEngine) Resume(ctx context.Context, spec RunSpec) RunSummar
 	}
 	return e.start(ctx, spec)
 }
-func (e *scriptedTaskEngine) Land(context.Context, *plandb.Store, string, string, string) (RunLanding, error) {
+func (e *scriptedTaskEngine) Land(context.Context, *plandb.Store, string, string, string, bool) (RunLanding, error) {
 	panic("a remote engine must never land here")
 }
 func (e *scriptedTaskEngine) Stop(context.Context, TaskRemoteRecord) error {

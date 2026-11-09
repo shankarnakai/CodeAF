@@ -363,6 +363,7 @@ func runGraph(name string, args []string) error {
 	// a metadata endpoint having answered.
 	linear := exec.NewLinear(client, space, web, *maxTurns, *maxTokens, deadline).
 		WithStore(history).WithMedia(mediaTools).WithAssistedBy(config.AssistedByModelAt(settings.ProfileDir, settings.Model)).
+		WithAttributionOff(!config.AttributionAt(settings.ProfileDir)).
 		WithContextLength(modelCatalog.ContextLength(settings.Model))
 	// The worker this build constructs, offered to the scheduler. The headless
 	// surface resolves a node's leaf through this registry while the resident

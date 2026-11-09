@@ -41,9 +41,10 @@ type RunTreeSnapshot struct {
 
 // SignRunCommits signs commits made since this snapshot in an in-place run.
 // A snapshot on an unborn branch can sign the run's first commits; a snapshot
-// outside git has no branch whose new history belongs to the run.
-func (s RunTreeSnapshot) SignRunCommits(model string) (int, error) {
-	sign := gitSignature{named: model != "", model: model}
+// outside git has no branch whose new history belongs to the run. The
+// attribution switch removes trailer lines when true.
+func (s RunTreeSnapshot) SignRunCommits(model string, attributionOff bool) (int, error) {
+	sign := gitSignature{disabled: attributionOff, named: model != "", model: model}
 	if s.unborn {
 		return signUnbornRunCommits(s.root, sign)
 	}

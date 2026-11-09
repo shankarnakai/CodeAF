@@ -7909,6 +7909,11 @@ func (a *Agent) newTaskAgentOn(ctx context.Context, dir string, node *TaskNode, 
 		// (Config.ProfileDir says why), so a child that did not carry this
 		// would name the model for somebody who had turned the name off.
 		AttributionModelOff: parent.AttributionModelOff,
+		// AND SO DOES WHETHER ATTRIBUTION IS ON AT ALL. The master switch
+		// (KeyAttribution) removes the whole trailer block when off, and a child
+		// that did not inherit it would sign for somebody who had turned signing
+		// off.
+		AttributionOff: parent.AttributionOff,
 		// And so does who decides a landing nobody could check. A parent node's
 		// own agent is the reader of its children's landing notes, so a family
 		// running under a different `task.settle` than the conversation would tell
@@ -9321,8 +9326,9 @@ func commitTaskWorkAs(dir, message string, wrote []string, sign gitSignature, ba
 // [exec.AttributionLaw]); this is the other half, and it is mechanical because
 // there is no model in the loop here to tell.
 //
-// THE REPOSITORY'S CONTRIBUTING RULE IS THE EXCEPTION. The caller checks it
-// before applying this signature; there is no setting that turns it off.
+// THE REPOSITORY'S CONTRIBUTING RULE AND THE ATTRIBUTION SETTING ARE THE
+// EXCEPTIONS. The caller checks the repository rule before applying this
+// signature; the `attribution` setting can turn the whole trailer off.
 //
 // AND THE AUTHOR DOES NOT MOVE. These commits stay authored as
 // codeaf <agentfield-bot@users.noreply.github.com> ([codeafGitIdentity]) rather

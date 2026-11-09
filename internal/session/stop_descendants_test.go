@@ -67,7 +67,7 @@ type stoppingLandingEngine struct {
 	releaseLanding chan struct{}
 }
 
-func (e *stoppingLandingEngine) Land(context.Context, *plandb.Store, string, string, string) (RunLanding, error) {
+func (e *stoppingLandingEngine) Land(context.Context, *plandb.Store, string, string, string, bool) (RunLanding, error) {
 	close(e.landingEntered)
 	<-e.releaseLanding
 	return e.landing, nil

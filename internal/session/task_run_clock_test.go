@@ -126,9 +126,9 @@ type slowLanding struct {
 	clock *fakeClock
 }
 
-func (s slowLanding) Land(ctx context.Context, store *plandb.Store, workspace, base, root string) (RunLanding, error) {
+func (s slowLanding) Land(ctx context.Context, store *plandb.Store, workspace, base, root string, attributionOff bool) (RunLanding, error) {
 	s.clock.advance(time.Minute)
-	return s.beltRunDouble.Land(ctx, store, workspace, base, root)
+	return s.beltRunDouble.Land(ctx, store, workspace, base, root, attributionOff)
 }
 
 // A RUN NO PROGRAM WORKED ENDS WHERE ITS ENGINE ANSWERED, never where its row

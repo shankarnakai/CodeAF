@@ -110,10 +110,14 @@ type ProgramFolderOrder struct {
 	// line's first run and for every shell run.
 	Carry *programCarry
 	// SignModel is the model the attribution line on the commit that finishes
-	// the run names, and "" for the line that names none: codeaf signs every
-	// commit it writes, and the only choice is whether the model is named
-	// ([gitSignature]).
+	// the run names, and "" for the line that names none. The master
+	// `attribution` switch can turn signing off entirely; when it is on, the
+	// only choice is whether the model is named ([gitSignature]).
 	SignModel string
+	// AttributionOff is true when the person turned AI attribution off,
+	// so the run's finishing commit carries no `Assisted-by` or
+	// `Co-Authored-By` lines regardless of whether a model answered.
+	AttributionOff bool
 }
 
 // ProgramFolder is one program run's folder as [PrepareProgramFolder] readied
@@ -175,6 +179,10 @@ type ProgramFolder struct {
 	// NoAttribution is true when the run had no answered model call, so its
 	// finishing commit does not credit a model that did no work in this run.
 	NoAttribution bool `json:"noAttribution,omitempty"`
+	// AttributionOff is true when the person turned AI attribution off,
+	// persisted so a process that settles the folder later honours the same
+	// choice.
+	AttributionOff bool `json:"attributionOff,omitempty"`
 	// message is the commit message the program wrote for the commit that
 	// ends its run, read from its notes just before they are moved
 	// ([ProgramFolder.readCommitMessage]); never written to the record.
@@ -262,7 +270,8 @@ func PrepareProgramFolder(order ProgramFolderOrder) (*ProgramFolder, error) {
 	folder := &ProgramFolder{
 		Program: order.Program.Name, Title: title, Dir: dir, Outer: outer,
 		Notes: order.Program.Notes, Keep: order.Keep, SignModel: order.SignModel,
-		key: canonicalPath(dir), place: order.Place,
+		AttributionOff: order.AttributionOff,
+		key:            canonicalPath(dir), place: order.Place,
 	}
 	if repo {
 		return prepareProgramCopy(order, folder)
@@ -757,7 +766,7 @@ func (f *ProgramFolder) commitLeftovers(result string) string {
 		}
 	}
 	args := append([]string{"-c", "commit.gpgsign=false"}, codeafGitIdentity()...)
-	if !f.NoAttribution {
+	if !f.NoAttribution && !f.AttributionOff {
 		// signOnce, because a message the program wrote may already carry a
 		// line of the signature, which would otherwise appear twice.
 		message = gitSignature{named: f.SignModel != "", model: f.SignModel}.signOnce(message)

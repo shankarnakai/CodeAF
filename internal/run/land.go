@@ -24,9 +24,10 @@ type Landing struct {
 const landingModel = ""
 
 // SignWork signs an in-place run's worker commits using the landing's model
-// choice. The run door itself makes no commit in the person's folder.
-func SignWork(before session.RunTreeSnapshot) (int, error) {
-	return before.SignRunCommits(landingModel)
+// choice and the person's attribution switch. The run door itself makes no
+// commit in the person's folder.
+func SignWork(before session.RunTreeSnapshot, attributionOff bool) (int, error) {
+	return before.SignRunCommits(landingModel, attributionOff)
 }
 
 // Land commits a run's working copy onto its branch and writes the answer as a
@@ -42,7 +43,7 @@ func SignWork(before session.RunTreeSnapshot) (int, error) {
 // of a run that only read, and it is written on the root the same way a landing
 // is. An error is the run having no working copy to land in at all, and then
 // there is no note to write, because there is nothing about this run to say.
-func Land(ctx context.Context, store *plandb.Store, workspace, base, rootID string) (Landing, error) {
+func Land(ctx context.Context, store *plandb.Store, workspace, base, rootID string, attributionOff bool) (Landing, error) {
 	if err := ctx.Err(); err != nil {
 		return Landing{}, err
 	}
@@ -50,7 +51,7 @@ func Land(ctx context.Context, store *plandb.Store, workspace, base, rootID stri
 	if root == nil {
 		return Landing{}, fmt.Errorf("land a run: no task %s in the store", rootID)
 	}
-	branch, changed, refusal, err := session.LandRunTree(workspace, base, root.Title, landingModel)
+	branch, changed, refusal, err := session.LandRunTree(workspace, base, root.Title, landingModel, attributionOff)
 	if err != nil {
 		return Landing{}, err
 	}

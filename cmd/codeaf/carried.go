@@ -300,6 +300,7 @@ func runCarriedHost(ctx context.Context, inv *delegate.Invocation) error {
 		return err
 	}
 	var modelsToWarm []string
+	profileDir := config.ProfileDir()
 	if asked != "" {
 		modelsToWarm = strings.Split(asked, ",")
 	}
@@ -364,7 +365,7 @@ func runCarriedHost(ctx context.Context, inv *delegate.Invocation) error {
 	// refusal — another program's run in a plain folder — before a cent is
 	// spent. A plain folder is no longer the program's first-line failure:
 	// codeaf says so on the program's line.
-	folder, err := carriedFolder(inv, record)
+	folder, err := carriedFolder(inv, record, profileDir)
 	if err != nil {
 		fmt.Fprintln(carriedStderr, "error:", err)
 		return exitCannotRun
@@ -531,14 +532,15 @@ var carriedAPIClose = (*modelapi.Server).Close
 // carriedFolder readies the folder a shell run's program works in
 // (internal/session's PrepareProgramFolder); nil for a program that edits no
 // files, which reads the folder where it is.
-func carriedFolder(inv *delegate.Invocation, record string) (*session.ProgramFolder, error) {
+func carriedFolder(inv *delegate.Invocation, record string, profileDir string) (*session.ProgramFolder, error) {
 	if !inv.Program.LandsTree() {
 		return nil, nil
 	}
 	return session.PrepareProgramFolder(session.ProgramFolderOrder{
 		Program: inv.Program, Dir: inv.Workspace, Brief: inv.Brief(),
 		Holder: "a run started at a shell", Keep: record,
-		Instead: "run it in the project's folder, or name that folder with --dir",
+		Instead:        "run it in the project's folder, or name that folder with --dir",
+		AttributionOff: !config.AttributionAt(profileDir),
 	})
 }
 

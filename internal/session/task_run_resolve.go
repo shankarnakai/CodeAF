@@ -101,7 +101,7 @@ func (a *Agent) acceptCompletedRun(ctx context.Context, g *TaskGraph, kept TaskN
 	if err := ctx.Err(); err != nil {
 		return "", true, err
 	}
-	branch, changed, refused, err := LandRunTree(tree.dir, tree.checkBase, kept.Title, kept.Model)
+	branch, changed, refused, err := LandRunTree(tree.dir, tree.checkBase, kept.Title, kept.Model, a.config.AttributionOff)
 	if err != nil {
 		return "", true, err
 	}

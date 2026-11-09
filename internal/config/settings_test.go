@@ -383,14 +383,24 @@ func TestSettingEditorsRefuseNonsenseInPlainLanguage(t *testing.T) {
 }
 
 // THE MODEL'S NAME IN THE `Assisted-by` LINE is on until someone says
-// otherwise, off leaves the line bare, and the shell still wins. The signature
-// itself is not a row at all.
+// otherwise, off leaves the line bare, and the shell still wins. The master
+// `attribution` switch is also registered and can turn signing off entirely;
+// the model-name row only matters when the master switch is on.
 func TestTheModelNameRowDefaultsOnAndTurnsOnlyTheNameOff(t *testing.T) {
 	dir := t.TempDir()
+	t.Setenv("CODEAF_ATTRIBUTION", "")
 	t.Setenv("CODEAF_ATTRIBUTION_MODEL", "")
 	rows := registry(t, dir)
-	if _, ok := rows.Row("attribution"); ok {
-		t.Fatal("the attribution row is still registered, so signing can still be turned off")
+	master, ok := rows.Row(KeyAttribution)
+	if !ok {
+		t.Fatal("the attribution master switch is not registered")
+	}
+	if master.Key != "attribution" || master.Env != "CODEAF_ATTRIBUTION" ||
+		master.Category != CategoryInterface || master.Kind != SettingBool {
+		t.Fatalf("the attribution row = %+v", master)
+	}
+	if master.Value() != "on" {
+		t.Fatalf("attribution is not on by default: %q", master.Value())
 	}
 	row, ok := rows.Row(KeyAttributionModel)
 	if !ok {

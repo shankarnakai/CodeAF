@@ -390,9 +390,10 @@ func TestTheChatManualAnswersTheQuestionsPeopleAsk(t *testing.T) {
 		{"stop adding a co-author trailer to my commits", "permissions"},
 		{"does it sign every comment it leaves on my pull request", "permissions"},
 		{"what is the small drafted with line under its comment", "permissions"},
-		// the user’s rulings on #1410 (2026-09-24): signing has no off, a
-		// person who had turned it off is told so, and a task landed on the
-		// worker harness, the belt tasks run on by default, names no model.
+		// Attribution is optional again: the `attribution` row turns trailers on or
+		// off, and the `attribution.model` row decides whether the `Assisted-by` line
+		// names the model. A task on the worker harness, the belt tasks run on by
+		// default, names no model.
 		{"I turned attribution off before, why are my commits signed again", "permissions"},
 		{"why does the commit my task landed not name the model", "permissions"},
 		// AND THE TASK PROPOSAL AS IT IS DRAWN NOW that it is that block too

@@ -35,15 +35,15 @@ import (
 // with CODEAF_TASK_BELT naming the node belt would change a landing for one nobody
 // composed. With the flag off this refuses and touches nothing.
 //
-// ATTRIBUTION IS ON UNLESS CONTRIBUTING FORBIDS IT. The same two trailer
-// lines are added to worker commits and the landing commit. model is the one
-// the `Assisted-by` line names; empty leaves it bare because this door does
-// not know which model each worker used.
-func LandRunTree(dir, base, title, model string) (branch string, changed []string, refusal string, err error) {
+// ATTRIBUTION IS ON UNLESS THE PERSON TURNED IT OFF. The same two trailer
+// lines are added to worker commits and the landing commit when the attribution
+// switch is on; model is the one the `Assisted-by` line names; empty leaves
+// it bare because this door does not know which model each worker used.
+func LandRunTree(dir, base, title, model string, attributionOff bool) (branch string, changed []string, refusal string, err error) {
 	if !bashBeltAsked() {
 		return "", nil, "", errors.New("the bash belt is off: CODEAF_TASK_BELT names the node belt")
 	}
-	sign := gitSignature{named: model != "", model: model}
+	sign := gitSignature{disabled: attributionOff, named: model != "", model: model}
 	// A plumbing failure leaves the original branch intact. The work must still
 	// come home, so report the signing problem and continue the landing.
 	if _, err := signRunCommits(dir, base, sign); err != nil {

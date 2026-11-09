@@ -1772,16 +1772,20 @@ func applyV3Governance(cfg session.Config, profileDir string, yolo, oneModel boo
 	// law; taskaudit_law_test.go now makes a second reader or an unwired door fail
 	// on the day it lands.
 	cfg.TaskAudit = config.TaskAuditEnabledAt(profileDir)
-	// AND WHETHER THE SIGNATURE ON THE GIT WORK codeaf DOES NAMES THE MODEL,
-	// read here for the reason the audit row above it is read here: every v3
-	// door comes through this function, and a row honoured in the conversation
-	// but not in an automation's run is a row the person cannot trust. The
-	// signature itself has no row: codeaf always signs. PROFILE-ONLY — a
-	// repository that could change what a visitor's commits say about them by
+	// AND WHETHER THE SIGNATURE ON THE GIT WORK codeaf DOES IS ON AT ALL, read
+	// here for the reason the audit row above it is read here: every v3 door
+	// comes through this function, and a row honoured in the conversation but
+	// not in an automation's run is a row the person cannot trust. Off removes
+	// the whole `Assisted-by` / `Co-Authored-By` trailer block. PROFILE-ONLY —
+	// a repository that could change what a visitor's commits say about them by
 	// being cloned would be writing into somebody else's provenance. The
-	// CONTRIBUTING file a repository writes still wins over the signature, but
+	// CONTRIBUTING file a repository writes still wins when attribution is on, but
 	// it wins by being read and obeyed, not by rewriting somebody's profile
 	// (internal/exec's AttributionLaw).
+	cfg.AttributionOff = !config.AttributionAt(profileDir)
+	// AND WHETHER THE SIGNATURE NAMES THE MODEL. This only matters when the
+	// attribution master switch above is on; off leaves the bare
+	// `Assisted-by: CodeAF` line.
 	cfg.AttributionModelOff = !config.AttributionModelAt(profileDir)
 	// Whether a reply that comes apart is cut and asked again. PROFILE-ONLY, and
 	// the reason is not trust this time but taste: it is a judgement about

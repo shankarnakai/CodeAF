@@ -203,7 +203,7 @@ func (a *Agent) landWorkspaceSet(ctx context.Context, engine RunEngine, run *bel
 			result.Refused += use.Slot + ": " + err.Error() + "; "
 			continue
 		}
-		receipt, err := engine.Land(ctx, run.store, tree.dir, tree.checkBase, run.root)
+		receipt, err := engine.Land(ctx, run.store, tree.dir, tree.checkBase, run.root, a.config.AttributionOff)
 		if err != nil {
 			use.Outcome = mergeAborted
 			result.Refused += use.Slot + ": " + err.Error() + "; "

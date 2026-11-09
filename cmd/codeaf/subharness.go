@@ -276,6 +276,7 @@ func buildLinear(build leafBuild) exec.Executor {
 		build.maxTurns, build.maxTokens, build.deadline).
 		WithStore(build.graph).WithMedia(build.media).
 		WithAssistedBy(config.AssistedByModelAt(build.settings.ProfileDir, build.model)).
+		WithAttributionOff(!config.AttributionAt(build.settings.ProfileDir)).
 		// The cooperative division verb: on when the person turned the mode
 		// on AND the surface holding this leaf can act on what it asks for.
 		// See leafBuild.swarm.

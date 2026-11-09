@@ -8,20 +8,12 @@ import (
 	"github.com/Agent-Field/codeaf/internal/manual"
 )
 
-// Both entry points build their own executor, and a setting honoured at one of
-// them is a setting the user cannot trust. The construction sites sit deep
-// inside the resident dispatch and the headless run, past a live provider and a
-// real store, so this reads the wiring instead: every place that builds a leaf
-// loop has to pass the model-name row into its signature.
-//
-// The resident's site is the constructor table now rather than chat.go — a
-// worker is chosen per node, so the choice and the construction moved together —
-// and chat.go builds no loop of its own at all. That last part is the invariant
-// worth keeping: a second construction site growing back inside the dispatch
-// path is exactly how one of these settings gets honoured in one place and not
-// the other.
-func TestBothExecutorConstructionSitesCarryAttribution(t *testing.T) {
-	for _, name := range []string{"subharness.go", "run.go"} {
+// Every entry point that builds its own executor has to pass both attribution
+// rows into its signature. The construction sites sit deep inside the resident
+// dispatch and the headless run, past a live provider and a real store, so this
+// reads the wiring instead.
+func TestEveryExecutorConstructionSiteCarriesAttribution(t *testing.T) {
+	for _, name := range []string{"subharness.go", "run.go", "exec.go", "chatv3_subharness.go", "subharness_run.go"} {
 		raw, err := os.ReadFile(name)
 		if err != nil {
 			t.Fatal(err)
@@ -32,6 +24,9 @@ func TestBothExecutorConstructionSitesCarryAttribution(t *testing.T) {
 		}
 		if !strings.Contains(source, "WithAssistedBy(config.AssistedByModelAt(") {
 			t.Fatalf("%s builds an executor without wiring the model-name row into its signature", name)
+		}
+		if !strings.Contains(source, "WithAttributionOff(!config.AttributionAt(") {
+			t.Fatalf("%s builds an executor without wiring the attribution on/off row", name)
 		}
 	}
 	raw, err := os.ReadFile("chat.go")
@@ -46,9 +41,9 @@ func TestBothExecutorConstructionSitesCarryAttribution(t *testing.T) {
 // A capability codeaf has and cannot explain is one the user meets first as a
 // surprise in their own git history.
 func TestManualExplainsAttribution(t *testing.T) {
-	for _, term := range []string{"attribution", "attribution.model", "CODEAF_ATTRIBUTION_MODEL", "Assisted-by", "sharing", "CONTRIBUTING"} {
-		if !manual.Mentions(term) {
-			t.Fatalf("no manual page mentions %q", term)
+	for _, term := range []string{"attribution", "attribution.model", "CODEAF_ATTRIBUTION", "CODEAF_ATTRIBUTION_MODEL", "Assisted-by", "Interface", "CONTRIBUTING", "AI attribution on commits"} {
+		if !manual.Chat().Mentions(term) {
+			t.Fatalf("no chat manual page mentions %q", term)
 		}
 	}
 }

@@ -61,7 +61,7 @@ func TestLandCommitsTheRunsWorkOntoItsBranch(t *testing.T) {
 		t.Fatalf("outcome = %q, want done", outcome)
 	}
 
-	landing, err := run.Land(ctx, store, work, base, store.RootID())
+	landing, err := run.Land(ctx, store, work, base, store.RootID(), false)
 	if err != nil {
 		t.Fatalf("Land: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestLandKeepsEveryRealFilename(t *testing.T) {
 	if got := run.NewSupervisor(store, work, 1, run.Limits{}, seat.workerFor).Run(ctx); got != run.OutcomeDone {
 		t.Fatalf("run outcome = %q", got)
 	}
-	landing, err := run.Land(ctx, store, work, base, store.RootID())
+	landing, err := run.Land(ctx, store, work, base, store.RootID(), false)
 	if err != nil || landing.Refused != "" || landing.Branch != "run-work" {
 		t.Fatalf("landing = %+v, error = %v", landing, err)
 	}
@@ -220,7 +220,7 @@ func TestLandLeavesOutUntrackedBuildCachesOnly(t *testing.T) {
 	if got := run.NewSupervisor(store, work, 1, run.Limits{}, seat.workerFor).Run(ctx); got != run.OutcomeDone {
 		t.Fatalf("run outcome = %q", got)
 	}
-	landing, err := run.Land(ctx, store, work, base, store.RootID())
+	landing, err := run.Land(ctx, store, work, base, store.RootID(), false)
 	if err != nil || landing.Refused != "" {
 		t.Fatalf("landing = %+v, error = %v", landing, err)
 	}
@@ -254,7 +254,7 @@ func TestLandRefusesARunThatWroteNothing(t *testing.T) {
 		t.Fatalf("outcome = %q, want done", outcome)
 	}
 
-	landing, err := run.Land(ctx, store, work, base, store.RootID())
+	landing, err := run.Land(ctx, store, work, base, store.RootID(), false)
 	if err != nil {
 		t.Fatalf("Land: %v", err)
 	}
@@ -273,7 +273,41 @@ func TestLandRefusesARunThatWroteNothing(t *testing.T) {
 	}
 }
 
-// Contracts 1, 5 and 7: the real supervisor's worker commits on its branch;
+// Contract: landing with attribution off leaves AI trailers out of both the
+// worker commit and the landing commit. The run still lands and still records
+// where it went.
+func TestLandLeavesOutTrailersWhenAttributionOff(t *testing.T) {
+	t.Setenv("CODEAF_TASK_BELT", "bash")
+	repo, work := runLandWorkspace(t)
+	base := strings.TrimSpace(runGitOut(t, repo, "rev-parse", "work"))
+	store := runOpenStore(t)
+	seat := newFakeSeat()
+	seat.actions["root"] = func(_ context.Context, _ plandb.Task) (run.Report, error) {
+		writeRunFile(t, filepath.Join(work, "worker.txt"), "worker\n")
+		runGit(t, work, "add", "worker.txt")
+		runGit(t, work, "-c", "user.name=Worker", "-c", "user.email=worker@example.test", "commit", "-m", "worker")
+		writeRunFile(t, filepath.Join(work, "leftover.txt"), "leftover\n")
+		return run.Report{Result: "worker finished"}, nil
+	}
+	if got := run.NewSupervisor(store, work, 1, run.Limits{}, seat.workerFor).Run(runContext(t)); got != run.OutcomeDone {
+		t.Fatalf("run outcome = %q", got)
+	}
+	landing, err := run.Land(runContext(t), store, work, base, store.RootID(), true)
+	if err != nil || landing.Refused != "" || landing.Branch != "run-work" {
+		t.Fatalf("landing = %+v, %v", landing, err)
+	}
+	for _, rev := range []string{"HEAD~1", "run-work"} {
+		message := runGitOut(t, work, "log", "-1", "--format=%B", rev)
+		if strings.Contains(message, "Assisted-by") || strings.Contains(message, "Co-Authored-By") {
+			t.Fatalf("%s should not carry AI trailers: %q", rev, message)
+		}
+	}
+	if notes := store.Notes(store.RootID(), 0); len(notes) == 0 || notes[len(notes)-1].Body != "landed on run-work: 2 files" {
+		t.Fatalf("notes = %v", notes)
+	}
+}
+
+// Contract 1, 5 and 7: the real supervisor's worker commits on its branch;
 // landing signs that commit, leaves its identity and hook alone, and counts its
 // changed path even when the worker left no uncommitted work.
 func TestLandSignsWorkerCommitAndNamesCommittedWork(t *testing.T) {
@@ -313,7 +347,7 @@ func TestLandSignsWorkerCommitAndNamesCommittedWork(t *testing.T) {
 			if _, err := os.Stat(marker); err != nil {
 				t.Fatalf("pre-commit hook did not run: %v", err)
 			}
-			landing, err := run.Land(runContext(t), store, work, base, store.RootID())
+			landing, err := run.Land(runContext(t), store, work, base, store.RootID(), false)
 			if err != nil || landing.Refused != "" || landing.Branch != "run-work" {
 				t.Fatalf("landing = %+v, %v", landing, err)
 			}
@@ -379,7 +413,7 @@ func TestLandNamesCommittedThenRevertedWork(t *testing.T) {
 	if got := run.NewSupervisor(store, work, 1, run.Limits{}, seat.workerFor).Run(runContext(t)); got != run.OutcomeDone {
 		t.Fatalf("run outcome = %q", got)
 	}
-	landing, err := run.Land(runContext(t), store, work, base, store.RootID())
+	landing, err := run.Land(runContext(t), store, work, base, store.RootID(), false)
 	if err != nil || landing.Refused != "" || landing.Branch != "run-work" || !reflect.DeepEqual(landing.Changed, []string{"reverted.txt"}) {
 		t.Fatalf("landing = %+v, %v", landing, err)
 	}

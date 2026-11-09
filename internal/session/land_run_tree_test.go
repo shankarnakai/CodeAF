@@ -19,7 +19,7 @@ func TestLandRunTreeLeavesNativeOwnershipMarkersOutOfTheWork(t *testing.T) {
 	writeFile(t, filepath.Join(repo, ".furrow", "fork-id"), "0123456789abcdef0123456789abcdef\n")
 	writeFile(t, filepath.Join(repo, ".furrow", "workspace-id"), "fedcba9876543210fedcba9876543210\n")
 	writeFile(t, filepath.Join(repo, "report.md"), "the requested report\n")
-	_, changed, refusal, err := LandRunTree(repo, "", "write the report", "")
+	_, changed, refusal, err := LandRunTree(repo, "", "write the report", "", false)
 	if err != nil || refusal != "" || !reflect.DeepEqual(changed, []string{"report.md"}) {
 		t.Fatalf("landing mixed ownership markers into the work: %v, %q, %v", changed, refusal, err)
 	}
@@ -33,7 +33,7 @@ func TestLandRunTreeLeavesCommittedNativeMarkersOutOfItsLedger(t *testing.T) {
 	writeFile(t, filepath.Join(repo, "report.md"), "the requested report\n")
 	mustGit(t, repo, "add", "--all")
 	mustGit(t, repo, "-c", "user.name=Worker", "-c", "user.email=worker@example.test", "commit", "-m", "worker checkpoint")
-	_, changed, refusal, err := LandRunTree(repo, base, "write the report", "")
+	_, changed, refusal, err := LandRunTree(repo, base, "write the report", "", false)
 	if err != nil || refusal != "" || !reflect.DeepEqual(changed, []string{"report.md"}) {
 		t.Fatalf("committed markers entered the landing ledger: %v, %q, %v", changed, refusal, err)
 	}
@@ -48,7 +48,7 @@ func TestLandRunTreeCommitsTheTreesOwnWorkOntoItsBranch(t *testing.T) {
 	writeFile(t, filepath.Join(repo, "second.txt"), "two\n")
 	writeFile(t, filepath.Join(repo, "shared.txt"), "the changed line\n")
 
-	branch, changed, refusal, err := LandRunTree(repo, "", "do the thing", "")
+	branch, changed, refusal, err := LandRunTree(repo, "", "do the thing", "", false)
 	if err != nil {
 		t.Fatalf("LandRunTree: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestLandRunTreeRefusesATreeWithNothingToLand(t *testing.T) {
 	t.Setenv("CODEAF_TASK_BELT", "bash")
 	repo := newTestRepo(t)
 
-	branch, changed, refusal, err := LandRunTree(repo, "", "only read", "")
+	branch, changed, refusal, err := LandRunTree(repo, "", "only read", "", false)
 	if err != nil {
 		t.Fatalf("LandRunTree: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestLandRunTreeWithBaseRefusesReadOnlyRun(t *testing.T) {
 	t.Setenv("CODEAF_TASK_BELT", "bash")
 	repo := newTestRepo(t)
 	base := strings.TrimSpace(gitOut(t, repo, "rev-parse", "HEAD"))
-	branch, changed, refusal, err := LandRunTree(repo, base, "only read", "")
+	branch, changed, refusal, err := LandRunTree(repo, base, "only read", "", false)
 	if err != nil || branch != "" || len(changed) != 0 || refusal != runNothingToLand {
 		t.Fatalf("read-only landing = %q, %v, %q, %v", branch, changed, refusal, err)
 	}
@@ -107,7 +107,7 @@ func TestLandRunTreeNamesCommittedThenRevertedWork(t *testing.T) {
 	base := strings.TrimSpace(gitOut(t, repo, "rev-parse", "HEAD"))
 	runCommitFile(t, repo, "reverted.txt", "add reverted")
 	mustGit(t, repo, "-c", "user.name=Worker", "-c", "user.email=worker@example.test", "revert", "--no-edit", "HEAD")
-	branch, changed, refusal, err := LandRunTree(repo, base, "work then revert", "")
+	branch, changed, refusal, err := LandRunTree(repo, base, "work then revert", "", false)
 	if err != nil || branch != "work" || refusal != "" || !reflect.DeepEqual(changed, []string{"reverted.txt"}) {
 		t.Fatalf("landing = %q, %v, %q, %v", branch, changed, refusal, err)
 	}
@@ -126,7 +126,7 @@ func TestLandRunTreeLeavesTheTreeAloneWithTheFlagOff(t *testing.T) {
 	before := gitOut(t, repo, "rev-parse", "HEAD")
 	writeFile(t, filepath.Join(repo, "second.txt"), "two\n")
 
-	if _, _, _, err := LandRunTree(repo, "", "do the thing", ""); err == nil {
+	if _, _, _, err := LandRunTree(repo, "", "do the thing", "", false); err == nil {
 		t.Fatal("LandRunTree with the belt off returned no error, want a refusal")
 	}
 	if after := gitOut(t, repo, "rev-parse", "HEAD"); after != before {

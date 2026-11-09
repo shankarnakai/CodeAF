@@ -115,8 +115,10 @@ var selfServiceGuards = map[string]string{
 	KeyTeamsWake: guardPressure,
 
 	KeyTaskAudit: guardProof,
-	// The signature itself has no row; what is left of it is whether the
-	// `Assisted-by` line names the model, and that is the person's to decide.
+	// The signature rows: whether any AI trailer is added at all, and whether
+	// the `Assisted-by` line names the model. A model that can switch either
+	// off can hide its hand in work that leaves the machine.
+	KeyAttribution:      guardSignature,
 	KeyAttributionModel: guardSignature,
 
 	// The credential fields that are not [Setting.Secret] rows. Google's id is

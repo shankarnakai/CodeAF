@@ -87,19 +87,18 @@ deleted your own copy. Your file is read once and never written to.
 
 ## Attribution: how codeaf signs git work
 
-Every commit codeaf writes for you — a worker's own, and the one the harness
-writes when work lands — ends the message with one blank line and the same two
-trailer lines, in this order and nothing after them:
+By default, every commit codeaf writes for you — a worker's own, and the one
+the harness writes when work lands — ends the message with one blank line and
+the same two trailer lines, in this order and nothing after them:
 
     Assisted-by: CodeAF (deepseek-v4-flash)
     Co-Authored-By: CodeAF <267109073+agentfield-bot@users.noreply.github.com>
 
 The name in brackets is the model alone, without the provider or company in
 front of it and without a routing suffix like `:free`. Nothing goes in the
-subject or the body. When it
-opens a pull request or an issue, it ends the body with an
-em-dash line and one sentence: *Drafted with CodeAF · reviewed and owned
-by the author*, linking to `agentfield.ai/github/codeaf`.
+subject or the body. When it opens a pull request or an issue, it ends the body
+with an em-dash line and one sentence: *Drafted with CodeAF · reviewed and
+owned by the author*, linking to `agentfield.ai/github/codeaf`.
 
 That is the whole of it. It is provenance, not a byline: never inside a code
 file, never in a commit subject, never in your README, and never in a
@@ -107,11 +106,12 @@ deliverable like a deck or a report. A repository that forbids AI trailers wins
 — its CONTRIBUTING or policy is honoured and the worker tells you it left the
 signature out.
 
-It cannot be turned off: the `attribution` setting and `CODEAF_ATTRIBUTION`
-are gone, and a profile still holding either is told so when codeaf starts. The
-one part you can turn off is the model's name — the **model in commits** row
-(`attribution.model`) under **sharing**, or `CODEAF_ATTRIBUTION_MODEL` from your
-shell — and then the first line is just `Assisted-by: CodeAF`.
+Attribution is on by default. To turn it off, use the **AI attribution on
+commits** row (`attribution`) under **Interface** in `/settings`, or set
+`CODEAF_ATTRIBUTION=0`. Off means no `Assisted-by` and no `Co-Authored-By`
+trailer is added. To hide only the model's name while keeping the trailer, use
+the **model in commits** row (`attribution.model`) or `CODEAF_ATTRIBUTION_MODEL`;
+then the first line is bare `Assisted-by: CodeAF`.
 
 ## Where a coding worker actually works, and what happens to work that was not brought back
 

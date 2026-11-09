@@ -1534,6 +1534,19 @@ type Config struct {
 	TaskAudit bool
 	Guardian  bool
 
+	// AttributionOff turns off all AI attribution on commits, pull requests,
+	// issues and comments codeaf writes (internal/config's KeyAttribution, env
+	// CODEAF_ATTRIBUTION). Off removes the `Assisted-by` and `Co-Authored-By`
+	// trailer lines from commits; the model-in-commits row only matters when
+	// attribution is on (AttributionOff is false).
+	//
+	// IT IS A RESOLVED BOOL AND NOT A PROFILE PATH, for the reason [TaskAudit]
+	// beside it is: a task node is handed no ProfileDir at all, so the row is
+	// resolved once at the door and travels down with the work. It is spelled
+	// as the OFF so that its zero value is the product default, and a caller
+	// that said nothing leaves attribution on.
+	AttributionOff bool
+
 	// AttributionModelOff is the person's `attribution.model` row turned off
 	// (internal/config's KeyAttributionModel, env CODEAF_ATTRIBUTION_MODEL):
 	// the `Assisted-by` line in the commits codeaf signs is then the bare
@@ -1542,14 +1555,8 @@ type Config struct {
 	// [Config.assistedByModel]) and the mechanical commit a landing writes
 	// without asking anybody ([Agent.signsGitWork]).
 	//
-	// IT NEVER TURNS SIGNING OFF. The `attribution` row that did is gone
-	// (2026-09-23): codeaf signs every commit, pull request and issue it writes.
-	//
-	// IT IS A RESOLVED BOOL AND NOT A PROFILE PATH, for the reason [TaskAudit]
-	// beside it is: a task node is handed no ProfileDir at all, so the row is
-	// resolved once at the door and travels down with the work. It is spelled
-	// as the OFF so that its zero value is the product default, and a caller
-	// that said nothing names the model.
+	// IT ONLY MATTERS WHEN ATTRIBUTION IS ON. The `attribution` master switch
+	// (KeyAttribution) removes the whole trailer block when it is off.
 	AttributionModelOff bool
 
 	// ReplyGuardOff turns off the watch on replies that stop being language

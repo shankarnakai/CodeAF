@@ -391,7 +391,6 @@ var retiredProfileKeys = map[string]bool{
 	"memory.consolidation": true, // reader removed by 10dcdfdd4
 	"practice_demand_pct":  true, // reader removed by 84ba8503e
 	"propose_new_skills":   true, // reader removed by 84ba8503e
-	"attribution":          true, // reader removed on 2026-09-23: signing has no off
 	// The v1 resident's scheduler knobs: the practice carve-out and its quiet
 	// period, the arrival brief's absence (whose value Load copied onto a field
 	// nothing read), and the clean-firing count that earned a charter tenure.
@@ -416,27 +415,11 @@ var retiredProfileKeys = map[string]bool{
 // plain sentence they are told instead of the silence the rest of
 // [retiredProfileKeys] gets.
 //
-// SILENCE IS RIGHT FOR A KEY NOBODY TYPED and wrong for one somebody did. A
-// profile holding `attribution: false` holds a person's decision not to sign,
-// and a build that stopped reading it without a word would be signing their
-// work behind their back — while one that kept obeying it would be a setting
-// the product says it no longer has. So such a key is reported unread, like a
-// key the loader never knew, and the surface prints this sentence in place of
-// the generic one ([RetiredRowNote]).
-//
-// The row's environment spelling counts as the row: `CODEAF_ATTRIBUTION` set in
-// a shell is the same decision made in a different place, and it is told the
-// same sentence ([retiredRowEnv]).
-var retiredRowNotes = map[string]string{
-	"attribution": "the attribution row and CODEAF_ATTRIBUTION are gone: codeaf always signs " +
-		"the commits, pull requests, issues and comments it writes. The one part you can turn off " +
-		"is the model's name in the Assisted-by line, with the " + KeyAttributionModel + " row.",
-}
+// SILENCE IS RIGHT FOR A KEY NOBODY TYPED and wrong for one somebody did.
+var retiredRowNotes = map[string]string{}
 
 // retiredRowEnv is the environment spelling each told retired row had.
-var retiredRowEnv = map[string]string{
-	"attribution": "CODEAF_ATTRIBUTION",
-}
+var retiredRowEnv = map[string]string{}
 
 // RetiredRowNote is the sentence a surface prints for a key the loader reported
 // unread because the row it belonged to is gone, and empty for every other

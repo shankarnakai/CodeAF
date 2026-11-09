@@ -125,12 +125,12 @@ func (d *beltRunDouble) Start(ctx context.Context, spec RunSpec) RunSummary {
 	return d.summary
 }
 
-func (d *beltRunDouble) Land(_ context.Context, _ *plandb.Store, workspace, base, _ string) (RunLanding, error) {
+func (d *beltRunDouble) Land(_ context.Context, _ *plandb.Store, workspace, base, _ string, attributionOff bool) (RunLanding, error) {
 	d.mu.Lock()
 	d.landCalls++
 	d.mu.Unlock()
 	if d.real {
-		branch, changed, refusal, err := LandRunTree(workspace, base, "the run", "")
+		branch, changed, refusal, err := LandRunTree(workspace, base, "the run", "", attributionOff)
 		return RunLanding{Branch: branch, Changed: changed, Refused: refusal}, err
 	}
 	return d.landing, nil
@@ -785,7 +785,7 @@ type landingRunDouble struct {
 }
 
 func (d landingRunDouble) Start(context.Context, RunSpec) RunSummary { return d.summary }
-func (d landingRunDouble) Land(context.Context, *plandb.Store, string, string, string) (RunLanding, error) {
+func (d landingRunDouble) Land(context.Context, *plandb.Store, string, string, string, bool) (RunLanding, error) {
 	if d.landCalls != nil {
 		*d.landCalls++
 	}

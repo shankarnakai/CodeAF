@@ -158,6 +158,7 @@ func runSubharnessCommand(args []string) error {
 	// second spelling of a budget here would be a number that drifts.
 	linear := exec.NewLinear(client, space, web, 0, 0, 0).
 		WithAssistedBy(config.AssistedByModelAt(settings.ProfileDir, settings.Model)).
+		WithAttributionOff(!config.AttributionAt(settings.ProfileDir)).
 		WithContextLength(modelCatalog.ContextLength(settings.Model))
 	registry := exec.NewRegistry(linear)
 	registerLeafExecutors(registry, leafBuild{

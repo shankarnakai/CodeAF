@@ -3849,7 +3849,7 @@ func runErrand(request doRequest, seats config.Seats) (outcome headlessOutcome, 
 			errand.BlockedOn, errand.machineHeld = held+" · nothing started before --timeout", true
 		}
 	}
-	if _, err := runengine.SignWork(before); err != nil {
+	if _, err := runengine.SignWork(before, !config.AttributionAt(settings.ProfileDir)); err != nil {
 		fmt.Fprintf(request.stderr, "codeaf: could not sign the run's commits: %v\n", err)
 	}
 	// WHAT THE RUN CHANGED IS WHERE IT STANDS: in the directory it was handed,
